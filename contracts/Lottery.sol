@@ -1,8 +1,11 @@
 pragma solidity ^0.4.24;
 
 import "./Ownable.sol";
+import "./SafeMath.sol";
+
 
 contract Lottery is Ownable {
+    using SafeMath for uint;
 
     uint ticketPrice;
     uint endingTime;
@@ -12,9 +15,9 @@ contract Lottery is Ownable {
     uint fee;
 
     event LotteryCreated(uint ticketPrice);
-    event LotteryCanceled();
-    event LotteryFinished(address winner, uint ticketsSold); 
-    event TicketPurchased(uint buyer, uint ticketPrice);
+    event LotteryCanceled(); // TODO: what params should we emit?
+    event LotteryFinished(address winner, uint ticketsSold, uint amountWon); 
+    event TicketPurchased(uint buyer);
 
     address[] uniqueTicketOwners;
     mapping (uint => address) ticketToOwner;
@@ -25,6 +28,9 @@ contract Lottery is Ownable {
     */
     constructor(uint _ticketPrice, uint _ticketsPerPerson, uint _fee, uint _endingTime, uint _ticketAmount) public {
         require(msg.sender == owner, "Not owner");
+        require(_ticketPrice > 0, "Invalid ticket price");
+        //require(_endingTime)
+        require(_ticketAmount > 0, "Invalid ticket amount");
         ticketPrice = _ticketPrice;
         ticketsPerPerson = _ticketsPerPerson;
         fee = _fee;
@@ -41,6 +47,8 @@ contract Lottery is Ownable {
         if(ownerTicketCount[msg.sender] == 1) {
             uniqueTicketOwners.push(msg.sender);
         }
+
+        emit TicketPurchased(msg.sender);
     } 
 
     /**
@@ -51,6 +59,7 @@ contract Lottery is Ownable {
         for(uint i = 0; i < uniqueTicketOwners.length; i++) {
             uniqueTicketOwners[i].transfer(ownerTicketCount[uniqueTicketOwners[i]] * ticketPrice);
         }
+        emit LotteryCanceled();
     }
 
     /**
@@ -67,13 +76,25 @@ contract Lottery is Ownable {
     */
     function finishLottery() public onlyOwner {
         require(_lotteryEnded(), "Lottery is still ongoing.");
-        address lotteryWinner = ticketToOwner[ticketSelect()];
-        lotteryWinner.transfer(ticketsSold * ticketPrice);
+        address lotteryWinner = ticketToOwner[_ticketSelect()];
+        //lotteryWinner.transfer(ticketsSold * ticketPrice);
+        uint amountWon = ticketsSold.mul(ticketPrice);
+        uint winningFee = amountWon.mul(fee).sub(100);
+        amountWon = amountWon.sub(winningFee);
+        lotteryWinner.transfer(amountWon);
+
+        emit LotteryFinished(lotteryWinner, ticketsSold, amountWon);
     }
 
+    // private or internal?
     /* @return a pseudorandom number based off of ending time, tickets sold, fees */
-    function ticketSelect() public view returns (uint) {
+    function _ticketSelect() private view returns (uint) {
         require(_lotteryEnded(), "Lottery is still ongoing.");
         return uint(keccak256(abi.encodePacked(endingTime, ticketsSold, fee))) % ticketsSold;
+    }
+
+    // is this safe?
+    function withdrawBalance() public onlyOwner {
+        msg.sender.transfer(this.balance);
     }
 }
