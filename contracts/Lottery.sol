@@ -17,7 +17,7 @@ contract Lottery is Ownable {
     event LotteryCreated(uint ticketPrice);
     event LotteryCanceled(); // TODO: what params should we emit?
     event LotteryFinished(address winner, uint ticketsSold, uint amountWon); 
-    event TicketPurchased(uint buyer);
+    event TicketPurchased(address buyer);
 
     address[] uniqueTicketOwners;
     mapping (uint => address) ticketToOwner;
@@ -27,11 +27,10 @@ contract Lottery is Ownable {
     * @dev For an unlimited amount of tickets in the lottery for its duration, set ticketAmount = 1.
     */
     constructor(uint _ticketPrice, uint _ticketsPerPerson, uint _fee, uint _endingTime, uint _ticketAmount) public {
-        require(msg.sender == owner, "Not owner");
         require(_ticketPrice > 0, "Invalid ticket price");
         //require(_endingTime)
         require(_ticketAmount > 0, "Invalid ticket amount");
-        ticketPrice = _ticketPrice;
+        ticketPrice = _ticketPrice * 1 finney;
         ticketsPerPerson = _ticketsPerPerson;
         fee = _fee;
         endingTime = _endingTime;
@@ -95,6 +94,6 @@ contract Lottery is Ownable {
 
     // is this safe?
     function withdrawBalance() public onlyOwner {
-        msg.sender.transfer(this.balance);
+        msg.sender.transfer(address(this).balance);
     }
 }
