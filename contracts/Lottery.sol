@@ -7,12 +7,12 @@ import "./SafeMath.sol";
 contract Lottery is Ownable {
     using SafeMath for uint;
 
-    uint ticketPrice;
-    uint endingTime;
-    uint ticketsSold;
-    uint ticketAmount;
-    uint ticketsPerPerson;
-    uint fee;
+    uint public ticketPrice;
+    uint public endingTime;
+    uint public ticketsSold;
+    uint public ticketAmount;
+    uint public ticketsPerPerson;
+    uint public fee;
 
     event LotteryCreated(uint ticketPrice);
     event LotteryCanceled(); // TODO: what params should we emit?
@@ -28,7 +28,7 @@ contract Lottery is Ownable {
     */
     constructor(uint _ticketPrice, uint _ticketsPerPerson, uint _fee, uint _endingTime, uint _ticketAmount) public {
         require(_ticketPrice > 0, "Invalid ticket price");
-        //require(_endingTime)
+        require(_endingTime > block.timestamp, "Invalid ending time");
         require(_ticketAmount > 0, "Invalid ticket amount");
         ticketPrice = _ticketPrice * 1 finney;
         ticketsPerPerson = _ticketsPerPerson;
@@ -41,7 +41,9 @@ contract Lottery is Ownable {
         require(!_lotteryEnded(), "Lottery has finished.");
         require(ownerTicketCount[msg.sender] < ticketsPerPerson, "You already have the maximum amount of tickets.");
         require(msg.value == ticketPrice, "Incorrect sum paid");
-        ticketToOwner[ticketsSold++] = msg.sender;
+
+        ticketsSold.add(1);
+        ticketToOwner[ticketsSold] = msg.sender;
         ownerTicketCount[msg.sender]++;
         if(ownerTicketCount[msg.sender] == 1) {
             uniqueTicketOwners.push(msg.sender);
@@ -67,7 +69,7 @@ contract Lottery is Ownable {
     *      If either condition is true, the lottery is ended.
     */
     function _lotteryEnded() private view returns (bool) {
-        return (ticketAmount > 1) ? (ticketAmount == ticketsSold || block.timestamp >= endingTime) : block.timestamp >= endingTime;
+        return (ticketAmount != 1) ? (ticketAmount == ticketsSold || block.timestamp >= endingTime) : block.timestamp >= endingTime;
     }
 
     /**
