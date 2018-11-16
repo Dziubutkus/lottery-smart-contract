@@ -76,15 +76,15 @@ contract Lottery is Ownable {
     * @dev Send lotteryWinner their reward
     */
     function finishLottery() public onlyOwner {
-        require(_lotteryEnded(), "Lottery is still ongoing.");
-        address lotteryWinner = ticketToOwner[_ticketSelect()];
+        //require(_lotteryEnded(), "Lottery is still ongoing.");
+        //address lotteryWinner = ticketToOwner[_ticketSelect()];
         //lotteryWinner.transfer(ticketsSold * ticketPrice);
         uint amountWon = ticketsSold.mul(ticketPrice);
         uint winningFee = amountWon.mul(fee).sub(100);
         amountWon = amountWon.sub(winningFee);
-        lotteryWinner.transfer(amountWon);
+        //lotteryWinner.transfer(amountWon);
 
-        emit LotteryFinished(lotteryWinner, ticketsSold, amountWon);
+        emit LotteryFinished(this, ticketsSold, amountWon);
     }
 
     // private or internal?
@@ -97,5 +97,9 @@ contract Lottery is Ownable {
     // is this safe?
     function withdrawBalance() public onlyOwner {
         msg.sender.transfer(address(this).balance);
+    }
+
+    function lotteryEnded() public view returns(bool){
+        return _lotteryEnded();
     }
 }

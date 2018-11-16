@@ -1,6 +1,9 @@
-const { ether } = require('./helpers/ether');
-const { balance } = require('./helpers/balance');
+//const { ether } = require('./helpers/ether');
+//const { getBalance } = require('./helpers/balance');
 const { assertRevert } = require('./helpers/assertRevert');
+const { increaseTo } = require('./helpers/time');
+const { increase } = require('./helpers/time');
+
 
 const BigNumber = web3.BigNumber;
 
@@ -47,8 +50,8 @@ contract('Lottery', function ([owner, participant1]) {
         
     });
 
-    beforeEach(async function () {
-        this.lottery = await Lottery.new(ticketPrice, ticketsPerPerson, fee, endingTime, ticketAmount);
+    before(async function () {
+        this.lottery = await Lottery.new(ticketPrice, ticketsPerPerson, fee, endingTime, ticketAmount, {from: owner});
     });
 
     describe('buying tickets', function () {
@@ -80,6 +83,25 @@ contract('Lottery', function ([owner, participant1]) {
             );
         });
 
-        //it('')
+        it('random person should not be able to finalize the lottery', async function() {
+            await assertRevert(
+                this.lottery.finishLottery({from: participant1})
+            );
+        });
+
+        it('should not be able to buy tickets when lottery is ended', async function() {
+            await increase(duration.weeks(1));
+            await assertRevert(
+                this.lottery.buyTicket({from: participant1, value: web3.toWei(ticketPrice, 'finney')})
+            );
+        });
+
+        it('only owner should be able to finalize the lottery', async function() {
+            //var ending = this.lottery.endingTime.call();
+            //var timestamp = block.timestamp;
+            //console.log(ending < timestamp);
+            console.log(await this.lottery.lotteryEnded());
+            await this.lottery.finishLottery({from: owner});
+        });
     });
 });
