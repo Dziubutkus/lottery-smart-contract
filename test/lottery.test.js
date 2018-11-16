@@ -60,8 +60,6 @@ contract('Lottery', function ([owner, participant1]) {
 
         it('should buy the ticket when the price is correct', async function () {
             await this.lottery.buyTicket({from: participant1, value: web3.toWei(ticketPrice, 'finney')});
-            var maxTickets = await this.lottery.fee.call();
-            console.log(maxTickets);
         });
 
         it('should not be able to buy more than max tickets per person', async function () {
@@ -75,13 +73,8 @@ contract('Lottery', function ([owner, participant1]) {
 
         it('should not be able to buy more than max lottery tickets', async function () {
             let testLottery = await Lottery.new(ticketPrice, 5, fee, endingTime, 2);
-            
-            //var maxTickets = await testLottery.ticketAmount.call();
-            //assert.equal(maxTickets, 2);
             await testLottery.buyTicket({from: participant1, value: web3.toWei(ticketPrice, 'finney')});
             await testLottery.buyTicket({from: participant1, value: web3.toWei(ticketPrice, 'finney')});
-            await testLottery.buyTicket({from: participant1, value: web3.toWei(ticketPrice, 'finney')});
-
             await assertRevert(
                 testLottery.buyTicket({from: participant1, value: web3.toWei(ticketPrice, 'finney')})
             );

@@ -42,7 +42,7 @@ contract Lottery is Ownable {
         require(ownerTicketCount[msg.sender] < ticketsPerPerson, "You already have the maximum amount of tickets.");
         require(msg.value == ticketPrice, "Incorrect sum paid");
 
-        ticketsSold.add(1);
+        ticketsSold = ticketsSold.add(1);
         ticketToOwner[ticketsSold] = msg.sender;
         ownerTicketCount[msg.sender]++;
         if(ownerTicketCount[msg.sender] == 1) {
