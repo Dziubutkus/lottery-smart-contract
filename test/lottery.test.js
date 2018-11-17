@@ -1,5 +1,5 @@
 //const { ether } = require('./helpers/ether');
-//const { getBalance } = require('./helpers/balance');
+const { ethGetBalance } = require('./helpers/web3');
 const { assertRevert } = require('./helpers/assertRevert');
 const { increaseTo } = require('./helpers/time');
 const { increase } = require('./helpers/time');
@@ -22,7 +22,7 @@ const duration = {
     years: function (val) { return val * this.days(365); },
 };
 
-contract('Lottery', function ([owner, participant1]) {
+contract('Lottery', function ([owner, participant1, participant2]) {
     const ticketPrice = 28; // $5 in finney
     const ticketsPerPerson = 1;
     const fee = 10; // 10%
@@ -97,11 +97,8 @@ contract('Lottery', function ([owner, participant1]) {
         });
 
         it('only owner should be able to finalize the lottery', async function() {
-            //var ending = this.lottery.endingTime.call();
-            //var timestamp = block.timestamp;
-            //console.log(ending < timestamp);
-            console.log(await this.lottery.lotteryEnded());
             await this.lottery.finishLottery({from: owner});
         });
     });
+
 });
