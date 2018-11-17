@@ -37,6 +37,10 @@ contract Lottery is Ownable {
         ticketAmount = _ticketAmount;
     }
 
+    function() public payable {
+        buyTicket();
+    }
+
     function buyTicket() public payable {
         require(!_lotteryEnded(), "Lottery has finished.");
         require(ownerTicketCount[msg.sender] < ticketsPerPerson, "You already have the maximum amount of tickets.");
@@ -76,18 +80,17 @@ contract Lottery is Ownable {
     * @dev Send lotteryWinner their reward
     */
     function finishLottery() public onlyOwner {
-        //require(_lotteryEnded(), "Lottery is still ongoing.");
-        //address lotteryWinner = ticketToOwner[_ticketSelect()];
-        //lotteryWinner.transfer(ticketsSold * ticketPrice);
+        require(_lotteryEnded(), "Lottery is still ongoing.");
+        address lotteryWinner = ticketToOwner[_ticketSelect()];
         uint amountWon = ticketsSold.mul(ticketPrice);
-        uint winningFee = amountWon.mul(fee).sub(100);
+        uint winningFee = amountWon.mul(fee).div(100);
         amountWon = amountWon.sub(winningFee);
-        //lotteryWinner.transfer(amountWon);
+        lotteryWinner.transfer(amountWon);
+        owner.transfer(address(this).balance);
 
-        emit LotteryFinished(this, ticketsSold, amountWon);
+        emit LotteryFinished(lotteryWinner, ticketsSold, amountWon);
     }
 
-    // private or internal?
     /* @return a pseudorandom number based off of ending time, tickets sold, fees */
     function _ticketSelect() private view returns (uint) {
         require(_lotteryEnded(), "Lottery is still ongoing.");
