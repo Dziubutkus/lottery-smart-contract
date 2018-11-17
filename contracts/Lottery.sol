@@ -94,7 +94,7 @@ contract Lottery is Ownable {
     /* @return a pseudorandom number based off of ending time, tickets sold, fees */
     function _ticketSelect() private view returns (uint) {
         require(_lotteryEnded(), "Lottery is still ongoing.");
-        return uint(keccak256(abi.encodePacked(endingTime, ticketsSold, fee))) % ticketsSold;
+        return uint(keccak256(abi.encodePacked(endingTime, block.timestamp, block.number))) % ticketsSold;
     }
 
     function withdrawBalance() public onlyOwner {
