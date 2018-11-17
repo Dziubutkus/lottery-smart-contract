@@ -97,7 +97,6 @@ contract Lottery is Ownable {
         return uint(keccak256(abi.encodePacked(endingTime, ticketsSold, fee))) % ticketsSold;
     }
 
-    // is this safe?
     function withdrawBalance() public onlyOwner {
         msg.sender.transfer(address(this).balance);
     }

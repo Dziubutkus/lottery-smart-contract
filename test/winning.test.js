@@ -26,15 +26,15 @@ contract('Lottery', function ([owner, participant1, participant2]) {
     const ticketPrice = 28; // $5 in finney
     const ticketsPerPerson = 1000;
     const fee = 10; // 10%
-    const endingTime = Math.floor(Date.now() / 1000) + duration.minutes(2);
+    const endingTime = Math.floor(Date.now() / 1000) + duration.seconds(30);
     const ticketAmount = 1;
 
     before(async function () {
         this.lottery = await Lottery.new(ticketPrice, ticketsPerPerson, fee, endingTime, ticketAmount, {from: owner});
     });
-
-    describe('buying tickets', function () {
-        it('should revert when amount is lower than the price', async function () {
+/*
+    describe('winning lottery', function () {
+        it('should buy 100 tickets', async function () {
             var preBalance = await ethGetBalance(participant1);
             for(i = 0; i < 100; i++) {
                 await this.lottery.buyTicket({from: participant1, value: web3.toWei(ticketPrice, 'finney')});
@@ -54,6 +54,29 @@ contract('Lottery', function ([owner, participant1, participant2]) {
             var postBal = await ethGetBalance(participant1);
             console.log("Owner:\n" + web3.fromWei(ownerBalance,'ether') + " " + web3.fromWei(postOwner, 'ether'));
             console.log("Participant:\n" + web3.fromWei(preBal,'ether') + " " + web3.fromWei(postBal, 'ether'));
+        });
+    });
+*/
+    describe('canceling lottery', function () {
+        it('should buy 100 tickets', async function () {
+            var preBalance = await ethGetBalance(participant2);
+            for(i = 0; i < 100; i++) {
+                await this.lottery.buyTicket({from: participant2, value: web3.toWei(ticketPrice, 'finney')});
+            }
+            var postBalance = await ethGetBalance(participant2);
+            console.log(web3.fromWei(preBalance, 'ether') + " " + web3.fromWei(postBalance, 'ether'));
+        });
+
+        it('should cancel the lottery and send the funds back', async function() {
+            var ownerBalance = await ethGetBalance(owner);
+            var preBal = await ethGetBalance(participant2);
+            console.log("Contract's balance: " + web3.fromWei(await ethGetBalance(this.lottery.address), 'ether'));
+            await this.lottery.cancelLottery({from: owner});
+            var postOwner = await ethGetBalance(owner);
+            var postBal = await ethGetBalance(participant2);
+            console.log("Owner:\n" + web3.fromWei(ownerBalance,'ether') + " " + web3.fromWei(postOwner, 'ether'));
+            console.log("Participant:\n" + web3.fromWei(preBal,'ether') + " " + web3.fromWei(postBal, 'ether'));
+            console.log("Contract's post balance: " + web3.fromWei(await ethGetBalance(this.lottery.address), 'ether'));
         });
     });
 });
