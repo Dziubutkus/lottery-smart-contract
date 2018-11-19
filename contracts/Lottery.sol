@@ -1,10 +1,10 @@
 pragma solidity ^0.4.24;
 
-import "./Ownable.sol";
+import "./Pausable.sol";
 import "./SafeMath.sol";
 
 
-contract Lottery is Ownable {
+contract Lottery is Pausable {
     using SafeMath for uint;
 
     uint public ticketPrice;
