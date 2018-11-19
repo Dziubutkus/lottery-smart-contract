@@ -10,6 +10,7 @@ contract Lottery is Ownable {
     uint public ticketPrice;
     uint public endingTime;
     uint public ticketsSold;
+    uint public uniqueOnwers;
     uint public ticketAmount;
     uint public ticketsPerPerson;
     uint public fee;
@@ -41,6 +42,20 @@ contract Lottery is Ownable {
         buyTicket();
     }
 
+    function cleanLottery() public {
+        require(_lotteryEnded(), "Lottery is ongoing.");
+        for (uint i = 0; i < uniqueOnwers; i++) {
+            delete ownerTicketCount[uniqueTicketOwners[i]];
+        }
+        for (uint j = 0; j < ticketsSold; j++) {
+            delete ticketToOwner[j];
+        }
+        endingTime = 0;
+        ticketsSold = 0;
+        uniqueOnwers = 0;
+        ticketsPerPerson = 0;
+    }
+
     function buyTicket() public payable {
         require(!_lotteryEnded(), "Lottery has finished.");
         require(ownerTicketCount[msg.sender] < ticketsPerPerson, "You already have the maximum amount of tickets.");
@@ -51,6 +66,7 @@ contract Lottery is Ownable {
         ownerTicketCount[msg.sender]++;
         if(ownerTicketCount[msg.sender] == 1) {
             uniqueTicketOwners.push(msg.sender);
+            uniqueOnwers++;
         }
 
         emit TicketPurchased(msg.sender);
@@ -61,7 +77,7 @@ contract Lottery is Ownable {
     */
     function cancelLottery() public onlyOwner {
         endingTime = block.timestamp;
-        for(uint i = 0; i < uniqueTicketOwners.length; i++) {
+        for(uint i = 0; i < uniqueOnwers; i++) {
             uniqueTicketOwners[i].transfer(ownerTicketCount[uniqueTicketOwners[i]] * ticketPrice);
         }
         emit LotteryCanceled();
