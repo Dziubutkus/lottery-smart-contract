@@ -42,7 +42,7 @@ contract Lottery is Ownable {
         buyTicket();
     }
 
-    function cleanLottery() public {
+    function cleanLottery() public onlyOwner {
         require(_lotteryEnded(), "Lottery is ongoing.");
         for (uint i = 0; i < uniqueOnwers; i++) {
             delete ownerTicketCount[uniqueTicketOwners[i]];
@@ -80,6 +80,7 @@ contract Lottery is Ownable {
         for(uint i = 0; i < uniqueOnwers; i++) {
             uniqueTicketOwners[i].transfer(ownerTicketCount[uniqueTicketOwners[i]] * ticketPrice);
         }
+        cleanLottery();
         emit LotteryCanceled();
     }
 
@@ -103,6 +104,7 @@ contract Lottery is Ownable {
         amountWon = amountWon.sub(winningFee);
         lotteryWinner.transfer(amountWon);
         owner.transfer(address(this).balance);
+        cleanLottery();
 
         emit LotteryFinished(lotteryWinner, ticketsSold, amountWon);
     }
