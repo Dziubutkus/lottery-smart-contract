@@ -20,6 +20,9 @@ contract Lottery is Ownable {
     event LotteryFinished(address winner, uint ticketsSold, uint amountWon); 
     event TicketPurchased(address buyer);
 
+    enum State {Active, Inactive}
+    State state;
+
     address[] uniqueTicketOwners;
     mapping (uint => address) ticketToOwner;
     mapping (address => uint) ownerTicketCount;
@@ -36,6 +39,24 @@ contract Lottery is Ownable {
         fee = _fee;
         endingTime = _endingTime;
         ticketAmount = _ticketAmount;
+        state = State.Active;
+    }
+
+    /**
+    * @dev Copy of constructor, used to reinitiate lottery
+    */
+    function _restartLottery(uint _ticketPrice, uint _ticketsPerPerson, uint _fee, uint _endingTime, uint _ticketAmount) public onlyOwner {
+        require(state == State.Inactive, "Lottery is active");
+        require(ticketsSold == 0 && uniqueOnwers == 0 && endingTime == 0, "Lottery must be cleaned");
+        require(_ticketPrice > 0, "Invalid ticket price");
+        require(_endingTime > block.timestamp, "Invalid ending time");
+        require(_ticketAmount > 0, "Invalid ticket amount");
+        ticketPrice = _ticketPrice * 1 finney;
+        ticketsPerPerson = _ticketsPerPerson;
+        fee = _fee;
+        endingTime = _endingTime;
+        ticketAmount = _ticketAmount;
+        state = State.Active;
     }
 
     function() public payable {
@@ -54,6 +75,7 @@ contract Lottery is Ownable {
         ticketsSold = 0;
         uniqueOnwers = 0;
         ticketsPerPerson = 0;
+        state = State.Inactive;
     }
 
     function buyTicket() public payable {
@@ -63,10 +85,10 @@ contract Lottery is Ownable {
 
         ticketsSold = ticketsSold.add(1);
         ticketToOwner[ticketsSold] = msg.sender;
-        ownerTicketCount[msg.sender]++;
+        ownerTicketCount[msg.sender].add(1);
         if(ownerTicketCount[msg.sender] == 1) {
             uniqueTicketOwners.push(msg.sender);
-            uniqueOnwers++;
+            uniqueOnwers.add(1);
         }
 
         emit TicketPurchased(msg.sender);
