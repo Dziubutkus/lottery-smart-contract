@@ -59,6 +59,8 @@ contract Lottery is Pausable {
         endingTime = _endingTime;
         ticketAmount = _ticketAmount;
         state = State.Active;
+
+        emit LotteryCreated(ticketPrice, endingTime, ticketAmount, ticketsPerPerson, fee);
     }
 
     function() public payable {
