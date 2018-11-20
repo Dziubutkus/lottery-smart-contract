@@ -15,7 +15,7 @@ contract Lottery is Pausable {
     uint public ticketsPerPerson;
     uint public fee;
 
-    event LotteryCreated(uint ticketPrice);
+    event LotteryCreated(uint ticketPrice, uint endingTime, uint ticketAmount, uint ticketsPerPerson, uint fee);
     event LotteryCanceled(); // TODO: what params should we emit?
     event LotteryFinished(address winner, uint ticketsSold, uint amountWon); 
     event TicketPurchased(address buyer);
@@ -40,6 +40,8 @@ contract Lottery is Pausable {
         endingTime = _endingTime;
         ticketAmount = _ticketAmount;
         state = State.Active;
+
+        emit LotteryCreated(ticketPrice, endingTime, ticketAmount, ticketsPerPerson, fee);
     }
 
     /**
