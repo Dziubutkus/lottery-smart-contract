@@ -45,7 +45,7 @@ contract Lottery is Pausable {
     /**
     * @dev Copy of constructor, used to reinitiate lottery
     */
-    function _restartLottery(uint _ticketPrice, uint _ticketsPerPerson, uint _fee, uint _endingTime, uint _ticketAmount) public onlyOwner {
+    function restartLottery(uint _ticketPrice, uint _ticketsPerPerson, uint _fee, uint _endingTime, uint _ticketAmount) public onlyOwner {
         require(state == State.Inactive, "Lottery is active");
         require(ticketsSold == 0 && uniqueOnwers == 0 && endingTime == 0, "Lottery must be cleaned");
         require(_ticketPrice > 0, "Invalid ticket price");
@@ -63,7 +63,7 @@ contract Lottery is Pausable {
         buyTicket();
     }
 
-    function cleanLottery() public onlyOwner {
+    function _cleanLottery() internal onlyOwner {
         require(_lotteryEnded(), "Lottery is ongoing.");
         for (uint i = 0; i < uniqueOnwers; i++) {
             delete ownerTicketCount[uniqueTicketOwners[i]];
@@ -102,8 +102,8 @@ contract Lottery is Pausable {
         for(uint i = 0; i < uniqueOnwers; i++) {
             uniqueTicketOwners[i].transfer(ownerTicketCount[uniqueTicketOwners[i]] * ticketPrice);
         }
-        cleanLottery();
         emit LotteryCanceled();
+        _cleanLottery();
     }
 
     /**
@@ -126,9 +126,9 @@ contract Lottery is Pausable {
         amountWon = amountWon.sub(winningFee);
         lotteryWinner.transfer(amountWon);
         owner.transfer(address(this).balance);
-        cleanLottery();
 
         emit LotteryFinished(lotteryWinner, ticketsSold, amountWon);
+        _cleanLottery();
     }
 
     /* @return a pseudorandom number based off of ending time, tickets sold, fees */
