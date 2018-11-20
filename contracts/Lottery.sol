@@ -101,8 +101,10 @@ contract Lottery is Pausable {
     */
     function cancelLottery() public onlyOwner {
         endingTime = block.timestamp;
-        for(uint i = 0; i < uniqueOnwers; i++) {
-            uniqueTicketOwners[i].transfer(ownerTicketCount[uniqueTicketOwners[i]] * ticketPrice);
+        for(uint i = 0; i < uniqueOnwers; i++) { //  Checks-Effects-Interactions pattern (https://solidity.readthedocs.io/en/develop/security-considerations.html#re-entrancy)
+            uint refundAmount = ownerTicketCount[uniqueTicketOwners[i]] * ticketPrice;
+            ownerTicketCount[uniqueTicketOwners[i]] = 0;
+            uniqueTicketOwners[i].transfer(refundAmount);
         }
         emit LotteryCanceled();
         _cleanLottery();
@@ -139,9 +141,9 @@ contract Lottery is Pausable {
         return uint(keccak256(abi.encodePacked(endingTime, block.timestamp, block.number))) % ticketsSold;
     }
 
-    function withdrawBalance() public onlyOwner {
-        msg.sender.transfer(address(this).balance);
-    }
+    // function withdrawBalance() public onlyOwner {
+    //     msg.sender.transfer(address(this).balance);
+    // }
 
     function lotteryEnded() public view returns(bool){
         return _lotteryEnded();
