@@ -87,7 +87,7 @@ contract Lottery is Pausable {
         require(ownerTicketCount[msg.sender] < ticketsPerPerson, "You already have the maximum amount of tickets.");
         require(msg.value == ticketPrice, "Incorrect sum paid");
         ticketToOwner[ticketsSold++] = msg.sender;
-        ownerTicketCount[msg.sender]++;
+        ownerTicketCount[msg.sender] = ownerTicketCount[msg.sender].add(1);
         if(ownerTicketCount[msg.sender] == 1) {
             uniqueTicketOwners.push(msg.sender);
             uniqueOnwers++;
