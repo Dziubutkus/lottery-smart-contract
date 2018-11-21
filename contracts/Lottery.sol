@@ -66,7 +66,7 @@ contract Lottery is Pausable {
     }
 
     function _cleanLottery() internal onlyOwner {
-        require(_lotteryEnded(), "Lottery is ongoing.");
+        //require(_lotteryEnded(), "Lottery is ongoing.");
         for (uint i = 0; i < uniqueOnwers; i++) {
             delete ownerTicketCount[uniqueTicketOwners[i]];
         }
