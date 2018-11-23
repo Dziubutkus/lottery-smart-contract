@@ -10,14 +10,18 @@ contract Lottery is Pausable {
     uint public ticketPrice;
     uint public endingTime;
     uint public ticketsSold;
+    uint public uniqueOwners;
     uint public ticketAmount;
     uint public ticketsPerPerson;
     uint public fee;
 
-    event LotteryCreated(uint ticketPrice);
+    event LotteryCreated(uint ticketPrice, uint endingTime, uint ticketAmount, uint ticketsPerPerson, uint fee);
     event LotteryCanceled(); // TODO: what params should we emit?
     event LotteryFinished(address winner, uint ticketsSold, uint amountWon); 
     event TicketPurchased(address buyer);
+
+    enum State {Active, Inactive}
+    State state;
 
     address[] uniqueTicketOwners;
     mapping (uint => address) ticketToOwner;
@@ -35,22 +39,58 @@ contract Lottery is Pausable {
         fee = _fee;
         endingTime = _endingTime;
         ticketAmount = _ticketAmount;
+        ticketsSold = 0;
+        state = State.Active;
+    }
+
+    /**
+    * @dev Copy of constructor, used to reinitiate lottery
+    */
+    function restartLottery(uint _ticketPrice, uint _ticketsPerPerson, uint _fee, uint _endingTime, uint _ticketAmount) public onlyOwner {
+        require(state == State.Inactive, "Lottery is active");
+        require(ticketsSold == 0 && uniqueOwners == 0 && endingTime == 0, "Lottery must be cleaned");
+        require(_ticketPrice > 0, "Invalid ticket price");
+        require(_endingTime > block.timestamp, "Invalid ending time");
+        require(_ticketAmount > 0, "Invalid ticket amount");
+        ticketPrice = _ticketPrice * 1 finney;
+        ticketsPerPerson = _ticketsPerPerson;
+        fee = _fee;
+        endingTime = _endingTime;
+        ticketAmount = _ticketAmount;
+        state = State.Active;
+
+        emit LotteryCreated(ticketPrice, endingTime, ticketAmount, ticketsPerPerson, fee);
     }
 
     function() public payable {
         buyTicket();
     }
 
+    function _cleanLottery() internal onlyOwner {
+        //require(_lotteryEnded(), "Lottery is ongoing.");
+        for (uint i = 0; i < uniqueOwners; i++) {
+            delete ownerTicketCount[uniqueTicketOwners[i]];
+        }
+        for (uint j = 0; j < ticketsSold; j++) {
+            delete ticketToOwner[j];
+        }
+        endingTime = 0;
+        ticketsSold = 0;
+        uniqueOwners = 0;
+        ticketsPerPerson = 0;
+        state = State.Inactive;
+    }
+
     function buyTicket() public payable {
         require(!_lotteryEnded(), "Lottery has finished.");
         require(ownerTicketCount[msg.sender] < ticketsPerPerson, "You already have the maximum amount of tickets.");
         require(msg.value == ticketPrice, "Incorrect sum paid");
-
-        ticketsSold = ticketsSold.add(1);
         ticketToOwner[ticketsSold] = msg.sender;
-        ownerTicketCount[msg.sender]++;
+        ticketsSold = ticketsSold.add(1);
+        ownerTicketCount[msg.sender] = ownerTicketCount[msg.sender].add(1);
         if(ownerTicketCount[msg.sender] == 1) {
             uniqueTicketOwners.push(msg.sender);
+            uniqueOwners = uniqueOwners.add(1);
         }
 
         emit TicketPurchased(msg.sender);
@@ -61,10 +101,13 @@ contract Lottery is Pausable {
     */
     function cancelLottery() public onlyOwner {
         endingTime = block.timestamp;
-        for(uint i = 0; i < uniqueTicketOwners.length; i++) {
-            uniqueTicketOwners[i].transfer(ownerTicketCount[uniqueTicketOwners[i]] * ticketPrice);
+        for(uint i = 0; i < uniqueOwners; i++) { //  Checks-Effects-Interactions pattern (https://solidity.readthedocs.io/en/develop/security-considerations.html#re-entrancy)
+            uint refundAmount = ownerTicketCount[uniqueTicketOwners[i]] * ticketPrice;
+            ownerTicketCount[uniqueTicketOwners[i]] = 0;
+            uniqueTicketOwners[i].transfer(refundAmount);
         }
         emit LotteryCanceled();
+        _cleanLottery();
     }
 
     /**
@@ -89,6 +132,7 @@ contract Lottery is Pausable {
         owner.transfer(address(this).balance);
 
         emit LotteryFinished(lotteryWinner, ticketsSold, amountWon);
+        _cleanLottery();
     }
 
     /* @return a pseudorandom number based off of ending time, tickets sold, fees */
@@ -97,9 +141,9 @@ contract Lottery is Pausable {
         return uint(keccak256(abi.encodePacked(endingTime, block.timestamp, block.number))) % ticketsSold;
     }
 
-    function withdrawBalance() public onlyOwner {
-        msg.sender.transfer(address(this).balance);
-    }
+    // function withdrawBalance() public onlyOwner {
+    //     msg.sender.transfer(address(this).balance);
+    // }
 
     function lotteryEnded() public view returns(bool){
         return _lotteryEnded();
