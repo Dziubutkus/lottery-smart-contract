@@ -10,7 +10,7 @@ contract Lottery is Pausable {
     uint public ticketPrice;
     uint public endingTime;
     uint public ticketsSold;
-    uint public uniqueOnwers;
+    uint public uniqueOwners;
     uint public ticketAmount;
     uint public ticketsPerPerson;
     uint public fee;
@@ -39,6 +39,7 @@ contract Lottery is Pausable {
         fee = _fee;
         endingTime = _endingTime;
         ticketAmount = _ticketAmount;
+        ticketsSold = 0;
         state = State.Active;
     }
 
@@ -47,7 +48,7 @@ contract Lottery is Pausable {
     */
     function restartLottery(uint _ticketPrice, uint _ticketsPerPerson, uint _fee, uint _endingTime, uint _ticketAmount) public onlyOwner {
         require(state == State.Inactive, "Lottery is active");
-        require(ticketsSold == 0 && uniqueOnwers == 0 && endingTime == 0, "Lottery must be cleaned");
+        require(ticketsSold == 0 && uniqueOwners == 0 && endingTime == 0, "Lottery must be cleaned");
         require(_ticketPrice > 0, "Invalid ticket price");
         require(_endingTime > block.timestamp, "Invalid ending time");
         require(_ticketAmount > 0, "Invalid ticket amount");
@@ -67,7 +68,7 @@ contract Lottery is Pausable {
 
     function _cleanLottery() internal onlyOwner {
         //require(_lotteryEnded(), "Lottery is ongoing.");
-        for (uint i = 0; i < uniqueOnwers; i++) {
+        for (uint i = 0; i < uniqueOwners; i++) {
             delete ownerTicketCount[uniqueTicketOwners[i]];
         }
         for (uint j = 0; j < ticketsSold; j++) {
@@ -75,7 +76,7 @@ contract Lottery is Pausable {
         }
         endingTime = 0;
         ticketsSold = 0;
-        uniqueOnwers = 0;
+        uniqueOwners = 0;
         ticketsPerPerson = 0;
         state = State.Inactive;
     }
@@ -84,11 +85,12 @@ contract Lottery is Pausable {
         require(!_lotteryEnded(), "Lottery has finished.");
         require(ownerTicketCount[msg.sender] < ticketsPerPerson, "You already have the maximum amount of tickets.");
         require(msg.value == ticketPrice, "Incorrect sum paid");
-        ticketToOwner[ticketsSold++] = msg.sender;
+        ticketToOwner[ticketsSold] = msg.sender;
+        ticketsSold = ticketsSold.add(1);
         ownerTicketCount[msg.sender] = ownerTicketCount[msg.sender].add(1);
         if(ownerTicketCount[msg.sender] == 1) {
             uniqueTicketOwners.push(msg.sender);
-            uniqueOnwers++;
+            uniqueOwners = uniqueOwners.add(1);
         }
 
         emit TicketPurchased(msg.sender);
@@ -99,7 +101,7 @@ contract Lottery is Pausable {
     */
     function cancelLottery() public onlyOwner {
         endingTime = block.timestamp;
-        for(uint i = 0; i < uniqueOnwers; i++) { //  Checks-Effects-Interactions pattern (https://solidity.readthedocs.io/en/develop/security-considerations.html#re-entrancy)
+        for(uint i = 0; i < uniqueOwners; i++) { //  Checks-Effects-Interactions pattern (https://solidity.readthedocs.io/en/develop/security-considerations.html#re-entrancy)
             uint refundAmount = ownerTicketCount[uniqueTicketOwners[i]] * ticketPrice;
             ownerTicketCount[uniqueTicketOwners[i]] = 0;
             uniqueTicketOwners[i].transfer(refundAmount);
