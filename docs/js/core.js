@@ -22,7 +22,7 @@ if (typeof web3 !== 'undefined') {
 	web3.eth.defaultAccount = web3.eth.accounts[0];
 	
 	// Join Smart Contract
-	var lotteryABI = $.getJSON("lotteryABI.json", function(contactABI) {
+	var lotteryABI = $.getJSON("json/lotteryABI.json", function(contactABI) {
 		var lotteryContractABI = web3.eth.contract(contactABI);
 		window.lotteryContract = lotteryContractABI.at(window.lotteryAddress);
 	});
