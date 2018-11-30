@@ -33,7 +33,7 @@ if (typeof web3 !== 'undefined') {
 	}
 } else {
 	if (!inNoWeb3) {
-		window.location.href = "?no-web3";
+		window.location.href = "/no-web3.html";
 	}
 }
 
@@ -77,7 +77,7 @@ jQuery(document).ready(function ($) {
 	// Etc
 	$('#buy_ticket').click(function() {
 		alert(window.ticketPrice);
-		window.lotteryContract.buyTicket({from: web3.eth.defaultAccount, value: web3.toWei(window.ticketPrice)}, function(err, resp) {
+		window.lotteryContract.buyTicket({from: web3.eth.defaultAccount, value: web3.toWei(window.ticketPrice, 'finney')}, function(err, resp) {
 			console.error(err);
 			console.warn(resp);
 		});
@@ -112,8 +112,8 @@ function getAndUpdateInfoFromSC() {
 	// Get ticket price
 	window.lotteryContract.ticketPrice(function(err, resp) {
 		if (!err) {
-			window.ticketPrice = web3.fromWei(resp['c'][0], 'kwei') / 10;
-			$('.l_price').html(window.ticketPrice+' ETH');
+			window.ticketPrice = resp['c'][0];
+			$('.l_price').html(web3.fromWei(web3.toWei(resp['c'][0], 'finney'), 'ether')+' ETH');
 		} else {
 			$('.l_price').html('Error');
 		}		
@@ -158,7 +158,7 @@ function getAndUpdateInfoFromSC() {
 	// Get fee
 	window.lotteryContract.fee(function(err, resp) {
 		if (!err) {
-			var ticketFee = web3.fromWei(resp['c'][0], 'kwei') / 10;
+			var ticketFee = web3.fromWei(web3.toWei(resp['c'][0], 'finney'), 'ether');
 			$('.l_fee').html(ticketFee+' ETH');
 		} else {
 			$('.l_fee').html('Error');
