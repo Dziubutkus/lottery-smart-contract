@@ -33,7 +33,7 @@ if (typeof web3 !== 'undefined') {
 	}
 } else {
 	if (!inNoWeb3) {
-		window.location.href = "/no-web3.html";
+		window.location.href = "no-web3.html";
 	}
 }
 
