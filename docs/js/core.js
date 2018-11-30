@@ -1,5 +1,5 @@
 // Global variables
-var lotteryAddress = '0x1371ae05a449308fe819211ffa68db3efef7c814';
+var lotteryAddress = '0x70b9c2a144433965a657009c5f67a18785be84d3';
 var lotteryContract = null;
 
 var lotteryActive = false;
@@ -77,7 +77,7 @@ jQuery(document).ready(function ($) {
 	// Etc
 	$('#buy_ticket').click(function() {
 		alert(window.ticketPrice);
-		window.lotteryContract.buyTicket({from: web3.eth.defaultAccount, value: web3.toWei(window.ticketPrice, 'finney')}, function(err, resp) {
+		window.lotteryContract.buyTicket({from: web3.eth.defaultAccount, value: web3.toWei(40, 'finney')}, function(err, resp) {
 			console.error(err);
 			console.warn(resp);
 		});
