@@ -2,9 +2,9 @@ pragma solidity ^0.4.24;
 
 import "./Pausable.sol";
 import "./SafeMath.sol";
+import "./OraclizeAPI.sol";
 
-
-contract Lottery is Pausable {
+contract Lottery is usingOraclize, Pausable {
     using SafeMath for uint;
 
     uint public ticketPrice;
@@ -14,11 +14,14 @@ contract Lottery is Pausable {
     uint public ticketAmount;
     uint public ticketsPerPerson;
     uint public fee;
+    uint public winner;
 
     event LotteryCreated(uint ticketPrice, uint endingTime, uint ticketAmount, uint ticketsPerPerson, uint fee);
-    event LotteryCanceled(); // TODO: what params should we emit?
+    event LotteryCanceled(); 
     event LotteryFinished(address winner, uint ticketsSold, uint amountWon); 
     event TicketPurchased(address buyer);
+    event NewOraclizeQuery(string description);
+    event RandomNumberGenerated(uint number);
 
     enum State {Active, Inactive}
     State state;
@@ -26,6 +29,8 @@ contract Lottery is Pausable {
     address[] uniqueTicketOwners;
     mapping (uint => address) ticketToOwner;
     mapping (address => uint) ownerTicketCount;
+    mapping(bytes32=>bool) validIds;
+
 
     /**
     * @dev For an unlimited amount of tickets in the lottery for its duration, set ticketAmount = 1.
@@ -136,14 +141,24 @@ contract Lottery is Pausable {
     }
 
     /* @return a pseudorandom number based off of ending time, tickets sold, fees */
-    function _ticketSelect() private view returns (uint) {
+    function _ticketSelect() private returns (uint) {
         require(_lotteryEnded(), "Lottery is still ongoing.");
-        return uint(keccak256(abi.encodePacked(endingTime, block.timestamp, block.number))) % ticketsSold;
+        _generateWinner();
+        //return uint(keccak256(abi.encodePacked(endingTime, block.timestamp, block.number))) % ticketsSold;
     }
 
-    // function withdrawBalance() public onlyOwner {
-    //     msg.sender.transfer(address(this).balance);
-    // }
+    function _generateWinner() public payable {
+        emit NewOraclizeQuery("Oraclize query was sent, standing by for the answer..");
+        bytes32 queryId = oraclize_query("WolframAlpha", "random number between 0 and 100");     
+        validIds[queryId] = true;
+    }
+
+    function __callback(bytes32 myid, string result) public {
+        if (msg.sender != oraclize_cbAddress()) revert("in __callback");
+        winner = parseInt(result); 
+        emit RandomNumberGenerated(winner);
+        // do something with the temperature measure..
+    }
 
     function lotteryEnded() public view returns(bool){
         return _lotteryEnded();
