@@ -15,6 +15,7 @@ contract Lottery is usingOraclize, Pausable {
     uint public ticketsPerPerson;
     uint public fee;
     uint public winner;
+    address public winnerAddress;
 
     event LotteryCreated(uint ticketPrice, uint endingTime, uint ticketAmount, uint ticketsPerPerson, uint fee);
     event LotteryCanceled(); 
@@ -46,6 +47,7 @@ contract Lottery is usingOraclize, Pausable {
         ticketAmount = _ticketAmount;
         ticketsSold = 0;
         state = State.Active;
+        oraclize_setCustomGasPrice(4000000000);
     }
 
     /**
@@ -62,6 +64,7 @@ contract Lottery is usingOraclize, Pausable {
         fee = _fee;
         endingTime = _endingTime;
         ticketAmount = _ticketAmount;
+        winnerAddress = 0x0;
         state = State.Active;
 
         emit LotteryCreated(ticketPrice, endingTime, ticketAmount, ticketsPerPerson, fee);
@@ -127,39 +130,41 @@ contract Lottery is usingOraclize, Pausable {
     /**
     * @dev Send lotteryWinner their reward
     */
-    function finishLottery() public onlyOwner {
-        require(_lotteryEnded(), "Lottery is still ongoing.");
-        address lotteryWinner = ticketToOwner[_ticketSelect()];
-        uint amountWon = ticketsSold.mul(ticketPrice);
-        uint winningFee = amountWon.mul(fee).div(100);
-        amountWon = amountWon.sub(winningFee);
-        lotteryWinner.transfer(amountWon);
-        owner.transfer(address(this).balance);
-
-        emit LotteryFinished(lotteryWinner, ticketsSold, amountWon);
-        _cleanLottery();
-    }
-
-    /* @return a pseudorandom number based off of ending time, tickets sold, fees */
-    function _ticketSelect() private returns (uint) {
+    function finishLottery() public payable onlyOwner {
         require(_lotteryEnded(), "Lottery is still ongoing.");
         _generateWinner();
-        //return uint(keccak256(abi.encodePacked(endingTime, block.timestamp, block.number))) % ticketsSold;
     }
 
-    function _generateWinner() public payable {
+    // TODO: maybe private?
+    function _generateWinner() internal {
+        require(_lotteryEnded(), "Lottery is still ongoing.");
         emit NewOraclizeQuery("Oraclize query was sent, standing by for the answer..");
-        bytes32 queryId = oraclize_query("WolframAlpha", "random number between 0 and 100");     
-        validIds[queryId] = true;
+        oraclize_query("WolframAlpha", strConcat("random number between 0 and ", uint2str(ticketsSold-1)));
+        //bytes32 queryId = oraclize_query("WolframAlpha", "random number between 0 and", ticketsSold-1);     
+        //validIds[queryId] = true;
     }
 
+    // Reverts sending money (calling proccessWinnings())
     function __callback(bytes32 myid, string result) public {
         if (msg.sender != oraclize_cbAddress()) revert("in __callback");
         winner = parseInt(result); 
         emit RandomNumberGenerated(winner);
-        // do something with the temperature measure..
+        winnerAddress = ticketToOwner[winner];
+        proccessWinnings();
     }
+    
+    function proccessWinnings() internal {
+        uint amountWon = ticketsSold.mul(ticketPrice);
+        uint winningFee = amountWon.mul(fee).div(100);
+        amountWon = amountWon.sub(winningFee);
+        
+        winnerAddress.transfer(amountWon);
+        owner.transfer(address(this).balance);
 
+        emit LotteryFinished(winnerAddress, ticketsSold, amountWon);
+        _cleanLottery();
+    }
+    
     function lotteryEnded() public view returns(bool){
         return _lotteryEnded();
     }

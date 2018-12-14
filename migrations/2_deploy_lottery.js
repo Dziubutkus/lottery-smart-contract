@@ -14,7 +14,7 @@ module.exports = function(deployer) {
     const ticketsPerPerson = 1;
     const fee = 10; // 10%
     const endingTime = Math.floor(Date.now() / 1000) + duration.weeks(1);
-    const ticketAmount = 1;
+    const ticketAmount = 5;
 
     deployer.deploy(Lottery, ticketPrice, ticketsPerPerson, fee, endingTime, ticketAmount);
 };
