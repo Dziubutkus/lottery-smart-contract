@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.0;
 
 import "./Pausable.sol";
 import "./SafeMath.sol";
@@ -15,7 +15,7 @@ contract Lottery is usingOraclize, Pausable {
     uint public ticketsPerPerson;
     uint public fee;
     uint public winner;
-    address public winnerAddress;
+    address payable public winnerAddress;
 
     event LotteryCreated(uint ticketPrice, uint endingTime, uint ticketAmount, uint ticketsPerPerson, uint fee);
     event LotteryCanceled(); 
@@ -27,8 +27,8 @@ contract Lottery is usingOraclize, Pausable {
     enum State {Active, Inactive}
     State state;
 
-    address[] uniqueTicketOwners;
-    mapping (uint => address) ticketToOwner;
+    address payable[] public uniqueTicketOwners;
+    mapping (uint => address payable) ticketToOwner;
     mapping (address => uint) ownerTicketCount;
     mapping(bytes32=>bool) validIds;
 
@@ -47,7 +47,7 @@ contract Lottery is usingOraclize, Pausable {
         ticketAmount = _ticketAmount;
         ticketsSold = 0;
         state = State.Active;
-        oraclize_setCustomGasPrice(4000000000);
+        //oraclize_setCustomGasPrice(4000000000);
     }
 
     /**
@@ -64,13 +64,13 @@ contract Lottery is usingOraclize, Pausable {
         fee = _fee;
         endingTime = _endingTime;
         ticketAmount = _ticketAmount;
-        winnerAddress = 0x0;
+        //winnerAddress = 0;
         state = State.Active;
 
         emit LotteryCreated(ticketPrice, endingTime, ticketAmount, ticketsPerPerson, fee);
     }
 
-    function() public payable {
+    function() external payable {
         buyTicket();
     }
 
@@ -145,7 +145,7 @@ contract Lottery is usingOraclize, Pausable {
     }
 
     // Reverts sending money (calling proccessWinnings())
-    function __callback(bytes32 myid, string result) public {
+    function __callback(bytes32 myid, string memory result) public {
         if (msg.sender != oraclize_cbAddress()) revert("in __callback");
         winner = parseInt(result); 
         emit RandomNumberGenerated(winner);
