@@ -47,7 +47,6 @@ contract Lottery is usingOraclize, Pausable {
         ticketAmount = _ticketAmount;
         ticketsSold = 0;
         state = State.Active;
-        //oraclize_setCustomGasPrice(4000000000);
     }
 
     /**
@@ -139,14 +138,14 @@ contract Lottery is usingOraclize, Pausable {
     function _generateWinner() internal {
         require(_lotteryEnded(), "Lottery is still ongoing.");
         emit NewOraclizeQuery("Oraclize query was sent, standing by for the answer..");
-        oraclize_query("WolframAlpha", strConcat("random number between 0 and ", uint2str(ticketsSold-1)));
-        //bytes32 queryId = oraclize_query("WolframAlpha", "random number between 0 and", ticketsSold-1);     
-        //validIds[queryId] = true;
+        bytes32 queryId = oraclize_query("WolframAlpha", strConcat("random number between 0 and ", uint2str(ticketsSold-1)));
+        validIds[queryId] = true;
     }
 
     // Reverts sending money (calling proccessWinnings())
     function __callback(bytes32 myid, string memory result) public {
-        if (msg.sender != oraclize_cbAddress()) revert("in __callback");
+        require(msg.sender != oraclize_cbAddress(), "msg.sender is not oraclize");
+        require(validIds[myid]);
         winner = parseInt(result); 
         emit RandomNumberGenerated(winner);
         winnerAddress = ticketToOwner[winner];
