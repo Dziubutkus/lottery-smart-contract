@@ -18,6 +18,7 @@ contract Lottery is usingOraclize, Pausable {
     address payable public winnerAddress;
     
     bool winningsProcessed = false;
+    bool finished;
 
     event LotteryCreated(uint ticketPrice, uint endingTime, uint ticketAmount, uint ticketsPerPerson, uint fee);
     event LotteryCanceled(); 
@@ -49,6 +50,7 @@ contract Lottery is usingOraclize, Pausable {
         ticketAmount = _ticketAmount;
         ticketsSold = 0;
         state = State.Active;
+        finished = false;
     }
 
     /**
@@ -68,7 +70,7 @@ contract Lottery is usingOraclize, Pausable {
         winnerAddress = address(0);
         winningsProcessed = false;
         state = State.Active;
-
+        finished = false;
         emit LotteryCreated(ticketPrice, endingTime, ticketAmount, ticketsPerPerson, fee);
     }
 
@@ -77,7 +79,6 @@ contract Lottery is usingOraclize, Pausable {
     }
 
     function _cleanLottery() internal onlyOwner {
-        //require(_lotteryEnded(), "Lottery is ongoing.");
         for (uint i = 0; i < uniqueOwners; i++) {
             delete ownerTicketCount[uniqueTicketOwners[i]];
         }
@@ -134,10 +135,11 @@ contract Lottery is usingOraclize, Pausable {
     */
     function finishLottery() public payable onlyOwner {
         require(_lotteryEnded(), "Lottery is still ongoing.");
+        require(!finished, "finishLottery was already called");
+        finished = true;
         _generateWinner();
     }
 
-    // TODO: maybe private?
     function _generateWinner() internal {
         require(_lotteryEnded(), "Lottery is still ongoing.");
         emit NewOraclizeQuery("Oraclize query was sent, standing by for the answer..");
