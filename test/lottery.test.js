@@ -24,10 +24,10 @@ const duration = {
 
 contract('Lottery', function ([owner, participant1, participant2]) {
     const ticketPrice = 28; // $5 in finney
-    const ticketsPerPerson = 1;
+    const ticketsPerPerson = 2;
     const fee = 10; // 10%
-    const endingTime = Math.floor(Date.now() / 1000) + duration.weeks(1);
-    const ticketAmount = 1;
+    const endingTime = Math.floor(Date.now() / 1000) + duration.seconds(30);
+    const ticketAmount = 2;
 
     describe('deploying contract', function () {
         it('should not deploy with wrong ticket price', async function () {
@@ -57,29 +57,24 @@ contract('Lottery', function ([owner, participant1, participant2]) {
     describe('buying tickets', function () {
         it('should revert when amount is lower than the price', async function () {
             await assertRevert (
-                this.lottery.buyTicket({from: participant1, value: web3.toWei(ticketPrice - 1, 'finney')})
+                this.lottery.buyTicket({from: participant1, value: web3.utils.toWei(web3.utils.toBN(ticketPrice - 1), 'finney')})
             );
         });
 
         it('should buy the ticket when the price is correct', async function () {
-            await this.lottery.buyTicket({from: participant1, value: web3.toWei(ticketPrice, 'finney')});
+            await this.lottery.buyTicket({from: participant1, value: web3.utils.toWei(web3.utils.toBN(ticketPrice), 'finney')});
         });
 
         it('should not be able to buy more than max tickets per person', async function () {
-            let testLottery = await Lottery.new(ticketPrice, 2, fee, endingTime, ticketAmount);
-            await testLottery.buyTicket({from: participant1, value: web3.toWei(ticketPrice, 'finney')});
-            await testLottery.buyTicket({from: participant1, value: web3.toWei(ticketPrice, 'finney')});
+            await this.lottery.buyTicket({from: participant1, value: web3.utils.toWei(web3.utils.toBN(ticketPrice), 'finney')});
             await assertRevert(
-                testLottery.buyTicket({from: participant1, value: web3.toWei(ticketPrice, 'finney')})
+                this.lottery.buyTicket({from: participant1, value: web3.utils.toWei(web3.utils.toBN(ticketPrice), 'finney')})
             );
         });
 
         it('should not be able to buy more than max lottery tickets', async function () {
-            let testLottery = await Lottery.new(ticketPrice, 5, fee, endingTime, 2);
-            await testLottery.buyTicket({from: participant1, value: web3.toWei(ticketPrice, 'finney')});
-            await testLottery.buyTicket({from: participant1, value: web3.toWei(ticketPrice, 'finney')});
             await assertRevert(
-                testLottery.buyTicket({from: participant1, value: web3.toWei(ticketPrice, 'finney')})
+                this.lottery.buyTicket({from: participant1, value: web3.utils.toWei(web3.utils.toBN(ticketPrice), 'finney')})
             );
         });
 
@@ -90,13 +85,18 @@ contract('Lottery', function ([owner, participant1, participant2]) {
         });
 
         it('should not be able to buy tickets when lottery is ended', async function() {
-            await increase(duration.weeks(1));
+            //await increase(duration.weeks(1));
             await assertRevert(
-                this.lottery.buyTicket({from: participant1, value: web3.toWei(ticketPrice, 'finney')})
+                this.lottery.buyTicket({from: participant1, value: web3.utils.toWei(web3.utils.toBN(ticketPrice), 'finney')})
             );
         });
 
         it('only owner should be able to finalize the lottery', async function() {
+            let sold = await this.lottery.ticketsSold.call();
+            let max = await this.lottery.ticketAmount.call();
+            console.log(sold + " " + max);
+            let bool = await this.lottery.lotteryEnded();
+            console.log("Ended: " + bool);
             await this.lottery.finishLottery({from: owner});
         });
     });

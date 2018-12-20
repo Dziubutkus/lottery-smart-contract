@@ -1,4 +1,4 @@
-pragma solidity ^0.5.0;
+pragma solidity >=0.4.0 <0.6.0;
 
 import "./Pausable.sol";
 import "./SafeMath.sol";
@@ -16,6 +16,8 @@ contract Lottery is usingOraclize, Pausable {
     uint public fee;
     uint public winner;
     address payable public winnerAddress;
+    
+    bool winningsProcessed = false;
 
     event LotteryCreated(uint ticketPrice, uint endingTime, uint ticketAmount, uint ticketsPerPerson, uint fee);
     event LotteryCanceled(); 
@@ -63,7 +65,8 @@ contract Lottery is usingOraclize, Pausable {
         fee = _fee;
         endingTime = _endingTime;
         ticketAmount = _ticketAmount;
-        //winnerAddress = 0;
+        winnerAddress = address(0);
+        winningsProcessed = false;
         state = State.Active;
 
         emit LotteryCreated(ticketPrice, endingTime, ticketAmount, ticketsPerPerson, fee);
@@ -147,19 +150,23 @@ contract Lottery is usingOraclize, Pausable {
         require(msg.sender != oraclize_cbAddress(), "msg.sender is not oraclize");
         require(validIds[myid]);
         winner = parseInt(result); 
-        emit RandomNumberGenerated(winner);
         winnerAddress = ticketToOwner[winner];
-        proccessWinnings();
+        
+        emit RandomNumberGenerated(winner);
     }
     
-    function proccessWinnings() internal {
+    function proccessWinnings() external onlyOwner {
+        require(winnerAddress != address(0), "Oracle's did not complete the query yet");
+        require(winningsProcessed == false, "Winnings were already processed");
         uint amountWon = ticketsSold.mul(ticketPrice);
         uint winningFee = amountWon.mul(fee).div(100);
         amountWon = amountWon.sub(winningFee);
         
         winnerAddress.transfer(amountWon);
         owner.transfer(address(this).balance);
-
+        
+        winningsProcessed = true;
+        
         emit LotteryFinished(winnerAddress, ticketsSold, amountWon);
         _cleanLottery();
     }

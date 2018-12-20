@@ -11,10 +11,10 @@ const duration = {
 
 module.exports = function(deployer) {
     const ticketPrice = 28; // $5 in finney
-    const ticketsPerPerson = 1;
+    const ticketsPerPerson = 2;
     const fee = 10; // 10%
     const endingTime = Math.floor(Date.now() / 1000) + duration.weeks(1);
-    const ticketAmount = 5;
+    const ticketAmount = 2;
 
     deployer.deploy(Lottery, ticketPrice, ticketsPerPerson, fee, endingTime, ticketAmount);
 };
