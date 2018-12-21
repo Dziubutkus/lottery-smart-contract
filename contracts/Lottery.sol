@@ -51,6 +51,7 @@ contract Lottery is usingOraclize, Pausable {
         ticketsSold = 0;
         state = State.Active;
         finished = false;
+        OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);
     }
 
     /**

@@ -92,11 +92,6 @@ contract('Lottery', function ([owner, participant1, participant2]) {
         });
 
         it('only owner should be able to finalize the lottery', async function() {
-            let sold = await this.lottery.ticketsSold.call();
-            let max = await this.lottery.ticketAmount.call();
-            console.log(sold + " " + max);
-            let bool = await this.lottery.lotteryEnded();
-            console.log("Ended: " + bool);
             await this.lottery.finishLottery({from: owner});
         });
     });
