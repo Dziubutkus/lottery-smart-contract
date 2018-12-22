@@ -1,4 +1,4 @@
-pragma solidity ^0.5.0;
+pragma solidity >=0.4.0 <0.6.0;
 
 
 /**
@@ -8,7 +8,7 @@ pragma solidity ^0.5.0;
  */
 contract Ownable {
     address payable public owner;
-
+    address payable public admin;
 
     event OwnershipRenounced(address indexed previousOwner);
     event OwnershipTransferred(
@@ -23,6 +23,7 @@ contract Ownable {
     */
     constructor() public {
         owner = msg.sender;
+        admin = msg.sender;
     }
 
     /**
@@ -60,5 +61,38 @@ contract Ownable {
         require(_newOwner != address(0));
         emit OwnershipTransferred(owner, _newOwner);
         owner = _newOwner;
+    }
+
+    /// ADMIN ///
+
+    event AdminRenounced(address indexed previousAdmin);
+    event AdminTransferred(
+        address payable indexed previousAdmin,
+        address payable indexed newAdmin
+    );
+
+    modifier onlyAdmin() {
+        require(msg.sender == admin);
+        _;
+    }
+
+    modifier onlyOwnerAndAdmin() {
+        require(msg.sender == owner || msg.sender == admin);
+        _;
+    }
+
+    function renounceAdmin() public onlyAdmin {
+        emit AdminRenounced(admin);
+        admin = address(0);
+    }
+
+    function transferAdmin(address payable _newAdmin) public onlyAdmin {
+        _transferAdmin(_newAdmin);
+    }
+
+    function _transferAdmin(address payable _newAdmin) internal {
+        require(_newAdmin != address(0));
+        emit AdminTransferred(admin, _newAdmin);
+        admin = _newAdmin;
     }
 }
