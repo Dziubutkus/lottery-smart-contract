@@ -57,7 +57,7 @@ contract Lottery is usingOraclize, Pausable {
     /**
     * @dev Copy of constructor, used to reinitiate lottery
     */
-    function restartLottery(uint _ticketPrice, uint _ticketsPerPerson, uint _fee, uint _endingTime, uint _ticketAmount) public onlyOwner {
+    function restartLottery(uint _ticketPrice, uint _ticketsPerPerson, uint _fee, uint _endingTime, uint _ticketAmount) public onlyOwnerAndAdmin {
         require(state == State.Inactive, "Lottery is active");
         require(ticketsSold == 0 && uniqueOwners == 0 && endingTime == 0, "Lottery must be cleaned");
         require(_ticketPrice > 0, "Invalid ticket price");
@@ -79,7 +79,7 @@ contract Lottery is usingOraclize, Pausable {
         buyTicket();
     }
 
-    function _cleanLottery() internal onlyOwner {
+    function _cleanLottery() internal {
         for (uint i = 0; i < uniqueOwners; i++) {
             delete ownerTicketCount[uniqueTicketOwners[i]];
         }
@@ -111,7 +111,7 @@ contract Lottery is usingOraclize, Pausable {
     /**
     * @dev Cancels the lottery by setting the ending time to the current time, then returns ticket sales
     */
-    function cancelLottery() public onlyOwner {
+    function cancelLottery() public onlyOwnerAndAdmin {
         endingTime = block.timestamp;
         for(uint i = 0; i < uniqueOwners; i++) { //  Checks-Effects-Interactions pattern (https://solidity.readthedocs.io/en/develop/security-considerations.html#re-entrancy)
             uint refundAmount = ownerTicketCount[uniqueTicketOwners[i]] * ticketPrice;
@@ -134,7 +134,7 @@ contract Lottery is usingOraclize, Pausable {
     /**
     * @dev Send lotteryWinner their reward
     */
-    function finishLottery() public payable onlyOwner {
+    function finishLottery() public onlyOwnerAndAdmin {
         require(_lotteryEnded(), "Lottery is still ongoing.");
         require(!finished, "finishLottery was already called");
         finished = true;
@@ -158,7 +158,7 @@ contract Lottery is usingOraclize, Pausable {
         emit RandomNumberGenerated(winner);
     }
     
-    function proccessWinnings() external onlyOwner {
+    function proccessWinnings() external onlyOwnerAndAdmin {
         require(winnerAddress != address(0), "Oracle's did not complete the query yet");
         require(winningsProcessed == false, "Winnings were already processed");
         uint amountWon = ticketsSold.mul(ticketPrice);
