@@ -144,7 +144,7 @@ contract Lottery is usingOraclize, Pausable {
     function _generateWinner() internal {
         require(_lotteryEnded(), "Lottery is still ongoing.");
         emit NewOraclizeQuery("Oraclize query was sent, standing by for the answer..");
-        bytes32 queryId = oraclize_query("WolframAlpha", strConcat("random number between 0 and ", uint2str(ticketsSold-1)));
+        bytes32 queryId = oraclize_query("WolframAlpha", strConcat("random integer between 0 and ", uint2str(ticketsSold-1)));
         validIds[queryId] = true;
     }
 
