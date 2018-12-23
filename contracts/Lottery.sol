@@ -32,7 +32,7 @@ contract Lottery is usingOraclize, Pausable {
 
     address payable[] public uniqueTicketOwners;
     mapping (uint => address payable) ticketToOwner;
-    mapping (address => uint) ownerTicketCount;
+    mapping (address => uint) public ownerTicketCount;
     mapping(bytes32=>bool) validIds;
 
 
@@ -83,6 +83,10 @@ contract Lottery is usingOraclize, Pausable {
         for (uint i = 0; i < uniqueOwners; i++) {
             delete ownerTicketCount[uniqueTicketOwners[i]];
         }
+        for (uint k = 0; k < uniqueOwners; k++) {
+            delete uniqueTicketOwners[k];
+        }
+        uniqueTicketOwners.length = 0;
         for (uint j = 0; j < ticketsSold; j++) {
             delete ticketToOwner[j];
         }

@@ -95,6 +95,13 @@ contract('Lottery', function (accounts) {
 
         it('only owner should be able to finalize the lottery', async function() {
             await this.lottery.finishLottery({from: owner});
+            var temp = await this.lottery.uniqueOwners.call();
+            console.log("# of Unique owners: " + temp);
+            console.log("Unique Owners: ");
+            var l;
+            for(l = 0; l < temp; l++) {
+                console.log(await this.lottery.uniqueTicketOwners.call(l));
+            }
         });
 
         it('should set a timeout for the test', async function() {
@@ -107,29 +114,61 @@ contract('Lottery', function (accounts) {
 
         it('after timeout', async function() {
             await this.lottery.processWinnings({ from: owner });
+            var temp = await this.lottery.uniqueOwners.call();
+            console.log("# of Unique owners: " + temp);
+            console.log("Unique Owners: ");
+            var l;
+            for(l = 0; l < temp; l++) {
+                console.log(await this.lottery.uniqueTicketOwners.call(l));
+            }
+            //console.log(await this.lottery.uniqueTicketOwners.call(0));
+
         });
 
         it('redo 10 lotteries', async function() {
-            await this.lottery.restartLottery(ticketPrice, 2, fee, endingTime, 8, { from: owner });
-            // buy tickets
-            await this.lottery.buyTicket({from: accounts[1], value: web3.utils.toWei(web3.utils.toBN(ticketPrice), 'finney')});
-            await this.lottery.buyTicket({from: accounts[2], value: web3.utils.toWei(web3.utils.toBN(ticketPrice), 'finney')});
-            await this.lottery.buyTicket({from: accounts[3], value: web3.utils.toWei(web3.utils.toBN(ticketPrice), 'finney')});
-            await this.lottery.buyTicket({from: accounts[4], value: web3.utils.toWei(web3.utils.toBN(ticketPrice), 'finney')});
-            await this.lottery.buyTicket({from: accounts[5], value: web3.utils.toWei(web3.utils.toBN(ticketPrice), 'finney')});
-            await this.lottery.buyTicket({from: accounts[6], value: web3.utils.toWei(web3.utils.toBN(ticketPrice), 'finney')});
-            await this.lottery.buyTicket({from: accounts[7], value: web3.utils.toWei(web3.utils.toBN(ticketPrice), 'finney')});
-            await this.lottery.buyTicket({from: accounts[8], value: web3.utils.toWei(web3.utils.toBN(ticketPrice), 'finney')});
-            // end the lottery
-            await this.lottery.finishLottery({ from: owner });
-            // wait for oraclize answer
-            function timeout(ms) {
-                return new Promise(resolve => setTimeout(resolve, ms));
+            var i;
+            for(i = 0; i < 10; i++) {
+                console.log("Check tickets");
+                var j;
+                for(j = 1; j < 9; j++) {
+                    console.log(await this.lottery.ownerTicketCount.call(accounts[j]));
+                }
+                
+                await this.lottery.restartLottery(ticketPrice, 1, fee, endingTime, 8, { from: owner });
+                // buy tickets
+                await this.lottery.buyTicket({from: accounts[1], value: web3.utils.toWei(web3.utils.toBN(ticketPrice), 'finney')});
+                await this.lottery.buyTicket({from: accounts[2], value: web3.utils.toWei(web3.utils.toBN(ticketPrice), 'finney')});
+                await this.lottery.buyTicket({from: accounts[3], value: web3.utils.toWei(web3.utils.toBN(ticketPrice), 'finney')});
+                await this.lottery.buyTicket({from: accounts[4], value: web3.utils.toWei(web3.utils.toBN(ticketPrice), 'finney')});
+                await this.lottery.buyTicket({from: accounts[5], value: web3.utils.toWei(web3.utils.toBN(ticketPrice), 'finney')});
+                await this.lottery.buyTicket({from: accounts[6], value: web3.utils.toWei(web3.utils.toBN(ticketPrice), 'finney')});
+                await this.lottery.buyTicket({from: accounts[7], value: web3.utils.toWei(web3.utils.toBN(ticketPrice), 'finney')});
+                await this.lottery.buyTicket({from: accounts[8], value: web3.utils.toWei(web3.utils.toBN(ticketPrice), 'finney')});
+                // end the lottery
+                await this.lottery.finishLottery({ from: owner });
+                // process winnings
+                console.log("Delete");
+                var k;
+                var temp = await this.lottery.uniqueOwners.call();
+                console.log("# of Unique owners: " + temp);
+                console.log("Unique Owners: ");
+                var l;
+                for(l = 0; l < temp; l++) {
+                    console.log(await this.lottery.uniqueTicketOwners.call(l));
+                }
+                console.log("Owner Ticket Count");
+                for(k = 0; k < temp; k++) {
+                    console.log(await this.lottery.ownerTicketCount.call(accounts[k+1]));
+                }
+                // wait for oraclize answer
+                function timeout(ms) {
+                    return new Promise(resolve => setTimeout(resolve, ms));
+                }
+                await timeout(25000);
+                console.log(i + " iteration winner: " + await this.lottery.winner.call() + " " + await this.lottery.winnerAddress.call() );
+
+                await this.lottery.processWinnings({ from: owner });
             }
-            await timeout(15000);
-            // process winnings
-            await this.lottery.processWinnings({ from: owner });
         });
     });
-
 });
