@@ -51,7 +51,7 @@ contract Lottery is usingOraclize, Pausable {
         ticketsSold = 0;
         state = State.Active;
         finished = false;
-        //OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);
+        OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);
     }
 
     /**
@@ -150,7 +150,7 @@ contract Lottery is usingOraclize, Pausable {
 
     // Reverts sending money (calling proccessWinnings())
     function __callback(bytes32 myid, string memory result) public {
-        //require(msg.sender != oraclize_cbAddress(), "msg.sender is not oraclize");
+        require(msg.sender == oraclize_cbAddress(), "msg.sender is not Oraclize");
         require(validIds[myid]);
         winner = parseInt(result); 
         winnerAddress = ticketToOwner[winner];
@@ -158,7 +158,7 @@ contract Lottery is usingOraclize, Pausable {
         emit RandomNumberGenerated(winner);
     }
     
-    function proccessWinnings() external onlyOwnerAndAdmin {
+    function processWinnings() external onlyOwnerAndAdmin {
         require(winnerAddress != address(0), "Oracle's did not complete the query yet");
         require(winningsProcessed == false, "Winnings were already processed");
         uint amountWon = ticketsSold.mul(ticketPrice);
