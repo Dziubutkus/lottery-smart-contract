@@ -7,17 +7,28 @@ import "./OraclizeAPI.sol";
 contract Lottery is usingOraclize, Pausable {
     using SafeMath for uint;
 
+    // ticket's price in finney
     uint public ticketPrice;
     uint public endingTime;
     uint public ticketsSold;
     uint public uniqueOwners;
+    // maximum total ticket amount available in this lottery
+    // if the value is 1, then there is no limit - infinite tickets
+    // lottery will only end when it reaches 'endingTime'
     uint public ticketAmount;
+    // number of tickets each user can buy
     uint public ticketsPerPerson;
+    // contract's owner will receive a fee from winner's price
+    // 10 == 10%
     uint public fee;
+    // shows which bought ticket was a lucky one
     uint public winner;
+    // winner's address
     address payable public winnerAddress;
     
+    // make sure processWinnings() will only be called once
     bool winningsProcessed = false;
+    // make sure finishLottery() will only be called once
     bool finished;
 
     event LotteryCreated(uint ticketPrice, uint endingTime, uint ticketAmount, uint ticketsPerPerson, uint fee);
@@ -30,14 +41,25 @@ contract Lottery is usingOraclize, Pausable {
     enum State {Active, Inactive}
     State state;
 
+    // array of unique owners, no duplicates
     address payable[] public uniqueTicketOwners;
+    // each ticket's number corresponds to its buyer
     mapping (uint => address payable) ticketToOwner;
+    // shows how many tickets each buyer has
     mapping (address => uint) public ownerTicketCount;
+    // stores oraclize query ids, is used to confirm that the received response from oraclize
+    // is not malicious
     mapping(bytes32=>bool) validIds;
 
 
     /**
     * @dev For an unlimited amount of tickets in the lottery for its duration, set ticketAmount = 1.
+    * @param _ticketPrice price of each ticket in finney
+    * @param _ticketsPerPerson amount of tickets one user can buy
+    * @param _fee fee that owners receives from the winning price
+    * @dev 10 fee == 10% fee
+    * @param _endingTime lottery's ending time in UTC.
+    * @param _ticketAmount maximum amount of tickets to be sold in the lottery 
     */
     constructor(uint _ticketPrice, uint _ticketsPerPerson, uint _fee, uint _endingTime, uint _ticketAmount) public {
         require(_ticketPrice > 0, "Invalid ticket price");
@@ -51,11 +73,19 @@ contract Lottery is usingOraclize, Pausable {
         ticketsSold = 0;
         state = State.Active;
         finished = false;
+        // for testing on local blockchain only!
         OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);
     }
 
     /**
     * @dev Copy of constructor, used to reinitiate lottery
+    * @dev For an unlimited amount of tickets in the lottery for its duration, set ticketAmount = 1.
+    * @param _ticketPrice price of each ticket in finney
+    * @param _ticketsPerPerson amount of tickets one user can buy
+    * @param _fee fee that owners receives from the winning price
+    * @dev 10 fee == 10% fee
+    * @param _endingTime lottery's ending time in UTC.
+    * @param _ticketAmount maximum amount of tickets to be sold in the lottery 
     */
     function restartLottery(uint _ticketPrice, uint _ticketsPerPerson, uint _fee, uint _endingTime, uint _ticketAmount) public onlyOwnerAndAdmin {
         require(state == State.Inactive, "Lottery is active");
@@ -75,10 +105,16 @@ contract Lottery is usingOraclize, Pausable {
         emit LotteryCreated(ticketPrice, endingTime, ticketAmount, ticketsPerPerson, fee);
     }
 
+    /**
+    * @dev we do not accept donations
+    */
     function() external payable {
         buyTicket();
     }
 
+    /**
+    * @dev clean's every mapping and array, prepares variables for the next lottery
+    */
     function _cleanLottery() internal {
         for (uint i = 0; i < uniqueOwners; i++) {
             delete ownerTicketCount[uniqueTicketOwners[i]];
@@ -97,22 +133,30 @@ contract Lottery is usingOraclize, Pausable {
         state = State.Inactive;
     }
 
+    /**
+    * @dev function accepts only the exact amount of finney. Sending more than ticket's price will revert
+    */
     function buyTicket() public payable {
         require(!_lotteryEnded(), "Lottery has finished.");
         require(ownerTicketCount[msg.sender] < ticketsPerPerson, "You already have the maximum amount of tickets.");
         require(msg.value == ticketPrice, "Incorrect sum paid");
+        // store ticket's owner in the mapping
         ticketToOwner[ticketsSold] = msg.sender;
+        // increment ticketsSold variable
         ticketsSold = ticketsSold.add(1);
+        // increment buyer's ticket amount
         ownerTicketCount[msg.sender] = ownerTicketCount[msg.sender].add(1);
+        // if the buyer didn't own any tickets before, add the buyer to uniqueTicketOwners array
         if(ownerTicketCount[msg.sender] == 1) {
             uniqueTicketOwners.push(msg.sender);
             uniqueOwners = uniqueOwners.add(1);
         }
-
+        // tell the world that someone bought the ticket
         emit TicketPurchased(msg.sender);
     } 
 
     /**
+    * @dev AVOID USING THIS FUNCTION, VERY EXPENSIVE
     * @dev Cancels the lottery by setting the ending time to the current time, then returns ticket sales
     */
     function cancelLottery() public onlyOwnerAndAdmin {
@@ -123,6 +167,7 @@ contract Lottery is usingOraclize, Pausable {
             uniqueTicketOwners[i].transfer(refundAmount);
         }
         emit LotteryCanceled();
+        // prepare the contract for the next lottery
         _cleanLottery();
     }
 
@@ -136,7 +181,7 @@ contract Lottery is usingOraclize, Pausable {
     }
 
     /**
-    * @dev Send lotteryWinner their reward
+    * @dev Check if every condition for ending the lottery is met
     */
     function finishLottery() public onlyOwnerAndAdmin {
         require(_lotteryEnded(), "Lottery is still ongoing.");
@@ -145,23 +190,34 @@ contract Lottery is usingOraclize, Pausable {
         _generateWinner();
     }
 
+    /**
+    * @dev send an Oraclize query to WolframAlpha asking for a random lottery winner
+    */
     function _generateWinner() internal {
-        require(_lotteryEnded(), "Lottery is still ongoing.");
         emit NewOraclizeQuery("Oraclize query was sent, standing by for the answer..");
         bytes32 queryId = oraclize_query("WolframAlpha", strConcat("random integer between 0 and ", uint2str(ticketsSold-1)));
         validIds[queryId] = true;
     }
 
-    // Reverts sending money (calling proccessWinnings())
+    /**
+    * @dev Oraclize returns the result to this function
+    * @param myid is used to check if it was a valid query previously made by this contract
+    * @param result random lucky winner's number
+    */
     function __callback(bytes32 myid, string memory result) public {
         require(msg.sender == oraclize_cbAddress(), "msg.sender is not Oraclize");
         require(validIds[myid]);
+        // convert the result from string to uint
         winner = parseInt(result); 
+        // set winner's address
         winnerAddress = ticketToOwner[winner];
-        
+        // Let the world know the lucky number
         emit RandomNumberGenerated(winner);
     }
     
+    /**
+    * @dev transfer winner's ether, take owner's fee and call _cleanLottery
+    */
     function processWinnings() external onlyOwnerAndAdmin {
         require(winnerAddress != address(0), "Oracle's did not complete the query yet");
         require(winningsProcessed == false, "Winnings were already processed");
@@ -178,6 +234,9 @@ contract Lottery is usingOraclize, Pausable {
         _cleanLottery();
     }
     
+    /**
+    * @dev returns if the ended or not
+    */
     function lotteryEnded() public view returns(bool){
         return _lotteryEnded();
     }
