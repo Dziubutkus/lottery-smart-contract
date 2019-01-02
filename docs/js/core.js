@@ -1,5 +1,6 @@
 // Global variables
-var lotteryAddress = '0x70b9c2a144433965a657009c5f67a18785be84d3';
+var lotteryAddress = '0xc20dffbcabb0eab056f5771d8ef71ca1d25e4341';
+var myPrivateKey = 'my_private_key';
 var lotteryContract = null;
 
 var lotteryActive = false;
@@ -19,12 +20,12 @@ var inMetaMaskLocked = window.location.href.indexOf('metamask-locked') == -1 ? f
 
 // Checking if user have existing web3 provider
 if (typeof web3 !== 'undefined') {
-	web3.eth.defaultAccount = web3.eth.accounts[0];
+	web3.eth.defaultAccount = web3.currentProvider.selectedAddress;
 	
 	// Join Smart Contract
 	var lotteryABI = $.getJSON("json/lotteryABI.json", function(contactABI) {
-		var lotteryContractABI = web3.eth.contract(contactABI);
-		window.lotteryContract = lotteryContractABI.at(window.lotteryAddress);
+		window.lotteryContract = new web3.eth.Contract(contactABI, window.lotteryAddress);
+		// window.lotteryContract = lotteryContractABI.at(window.lotteryAddress);
 	});
 
 	// Checking is client going with web3 provider in to 'no-web3' page.
@@ -51,9 +52,9 @@ jQuery(document).ready(function ($) {
 	// Add information in website from MetaMask
 	if (typeof web3 !== 'undefined') {
 		setTimeout(function() {
-			$('.w_address').html(web3.eth.defaultAccount);
-			web3.eth.getBalance(web3.eth.defaultAccount, function(err, resp) {
-				var balance = web3.fromWei(resp['c'][0], 'kwei') / 10;
+			$('.w_address').html(web3.currentProvider.selectedAddress);
+			web3.eth.getBalance(web3.currentProvider.selectedAddress, function(err, resp) {
+				var balance = web3.utils.fromWei(resp, 'ether');;
 				$('.w_balance').html(balance+' ETH');
 			});
 		}, 50);
@@ -63,9 +64,9 @@ jQuery(document).ready(function ($) {
 	}
 
 	// Get lottery owner
-	window.lotteryContract.owner(function(err, resp) {
-		if (!err) {
-			if (web3.eth.defaultAccount == resp) {
+	window.lotteryContract.methods.owner().call().then(function (response) {
+		if (response) {
+			if (web3.currentProvider.selectedAddress.toLowerCase() == response.toLowerCase()) {
 				$('.owner_menu').show();
 			}
 		}
@@ -76,93 +77,86 @@ jQuery(document).ready(function ($) {
 
 	// Etc
 	$('#buy_ticket').click(function() {
-		alert(window.ticketPrice);
-		window.lotteryContract.buyTicket({from: web3.eth.defaultAccount, value: web3.toWei(40, 'finney')}, function(err, resp) {
+		window.lotteryContract.methods.buyTicket().send({from: web3.currentProvider.selectedAddress, value: window.ticketPrice}, function(err, resp) {
 			console.error(err);
 			console.warn(resp);
+		})
+		.on('transactionHash', function (hash) {
+			alert('Please wait, you will get your ticket soon!');
+		})
+		.on('receipt', function (receipt) {
+			alert('Your ticket arrived!');
+			getAndUpdateInfoFromSC();
 		});
 	});
+
+	if ($('#test_signed').length) {
+		$('#test_signed').click(function () {
+
+			var jx = window.lotteryContract.methods.buyTicket().encodeABI();
+			console.log('JX:');
+			console.log(jx);
+			web3.eth.accounts.signTransaction({to: window.lotteryAddress, gas: 2000000, data: jx, value: window.ticketPrice}, window.myPrivateKey).then(function(response) {
+				console.log(response);
+
+				web3.eth.sendSignedTransaction(response.rawTransaction).on('receipt', console.log);
+			});
+
+		});
+	}
 });
 
 function getAndUpdateInfoFromSC() {
 	// Get lottery status (active or not)
-	window.lotteryContract.lotteryEnded(function(err, resp) {
-		if (!err) {
-			if (!resp) {
-				window.lotteryActive = true;
-				$('.l_status').html('Active');
-			} else {	
-				$('.l_status').html('Inactive');
-			}
+	window.lotteryContract.methods.lotteryEnded().call().then(function (response) {
+		if (!response) {
+			window.lotteryActive = true;
+			$('.l_status').html('Active');
 		} else {	
-			$('.l_status').html('Error');
+			$('.l_status').html('Inactive');
 		}
 	});
 
 	// Get lottery ending time
-	window.lotteryContract.endingTime(function(err, resp) {
-		if (!err) {
-			window.lotteryEndingTime = resp['c'][0];
-			$('.l_ending_time').html(timeConverter(window.lotteryEndingTime));
-		} else {
-			$('.l_ending_time').html('Error');
-		}
+	window.lotteryContract.methods.endingTime().call().then(function (response) {
+		window.lotteryEndingTime = response;
+		$('.l_ending_time').html(timeConverter(window.lotteryEndingTime));
 	});
 
 	// Get ticket price
-	window.lotteryContract.ticketPrice(function(err, resp) {
-		if (!err) {
-			window.ticketPrice = resp['c'][0];
-			$('.l_price').html(web3.fromWei(web3.toWei(resp['c'][0], 'finney'), 'ether')+' ETH');
-		} else {
-			$('.l_price').html('Error');
-		}		
+	window.lotteryContract.methods.ticketPrice().call().then(function (response) {
+		window.ticketPrice = response;
+		$('.l_price').html(web3.utils.fromWei(window.ticketPrice, 'ether')+' ETH');
 	});
 
 	// Get tickets amount
-	window.lotteryContract.ticketAmount(function(err, resp) {
-		if (!err) {
-			$('.l_amount').html(resp['c'][0]);
-		} else {
-			$('.l_amount').html('Error');
-		}		
+	window.lotteryContract.methods.ticketAmount().call().then(function (response) {
+		$('.l_amount').html(response);
 	});
 
 	// Get max tickets per person
-	window.lotteryContract.ticketsPerPerson(function(err, resp) {
-		if (!err) {
-			$('.l_tickets_per_person').html(resp['c'][0]);
-		} else {
-			$('.l_tickets_per_person').html('Error');
-		}		
+	window.lotteryContract.methods.ticketsPerPerson().call().then(function (response) {
+		$('.l_tickets_per_person').html(response);
 	});
 
 	// Get sold tickets
-	window.lotteryContract.ticketsSold(function(err, resp) {
-		if (!err) {
-			$('.l_sold').html(resp['c'][0]);
-		} else {
-			$('.l_sold').html('Error');
-		}		
+	window.lotteryContract.methods.ticketsSold().call().then(function (response) {
+		$('.l_sold').html(response);
 	});
 
 	// Get unique owners
-	window.lotteryContract.uniqueOwners(function(err, resp) {
-		if (!err) {
-			$('.l_unique_owners').html(resp['c'][0]);
-		} else {
-			$('.l_unique_owners').html('Error');
-		}		
+	window.lotteryContract.methods.uniqueOwners().call().then(function (response) {
+		$('.l_unique_owners').html(response);
 	});
 
 	// Get fee
-	window.lotteryContract.fee(function(err, resp) {
-		if (!err) {
-			var ticketFee = web3.fromWei(web3.toWei(resp['c'][0], 'finney'), 'ether');
-			$('.l_fee').html(ticketFee+' ETH');
-		} else {
-			$('.l_fee').html('Error');
-		}		
+	window.lotteryContract.methods.fee().call().then(function (response) {
+		$('.l_fee').html(response+'%');
+	});
+
+	// Get your tickets
+	window.lotteryContract.methods.ownerTicketCount(web3.currentProvider.selectedAddress).call().then(function (response) {
+		$('.y_tickets').html(response);
 	});
 }
 
