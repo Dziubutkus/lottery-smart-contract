@@ -1,6 +1,6 @@
 #  CryptaLot Smart Contract
 
-Cryptalot is an Ethereum-based smart contract that allows for a completely auditable and decentralized lottery.  This lottery smart contract utilizes true randomness through Oraclize, a service that allows for secure access to a RNG.  The functions used to initialize and maintain the smart contract include:
+CryptaLot is an Ethereum-based smart contract that allows for a completely auditable and decentralized lottery.  This lottery smart contract utilizes true randomness through Oraclize, a service that allows for secure access to a RNG.  The functions used to initialize and maintain the smart contract include:
 
 * buyTicket
 * pause
